@@ -1,3 +1,20 @@
+/************************
+ RFID
+rst: pin 9
+miso: pin 12
+mosi: pin 11
+sck: pin 13
+sda pin 10
+//////////////
+BUS line 
+up pin 5
+down pin 4
+//////////////////
+stop
+up pin 3
+down pin2
+
+******************************/
 #include <SPI.h>
 #include <MFRC522.h>
 #define SS_PIN 10
@@ -14,6 +31,7 @@ void setup() {
   pinMode(busdow,INPUT);
   pinMode(stopup,INPUT);
   pinMode(stopdow,INPUT);
+  Serial.println("NO.0 BUS_0  STOP");
   SPI.begin(); // Init SPI bus
   rfid.PCD_Init(); // Init MFRC522 
 }
@@ -246,9 +264,25 @@ void loop() {
   // put your main code here, to run repeatedly:
     int Bup=digitalRead(busup);
     int Bdw=digitalRead(busdow);
+    int Sup=digitalRead(stopup);
+    int Sdw=digitalRead(stopdow);
+  
+   
     
-
-    if(Bup==1&&Bdw==0){//選擇路線 向上
+    if(Bup==0&&Bdw==0&&Sup==0&&Sdw==0) {
+      if ( ! rfid.PICC_IsNewCardPresent())  // Look for new cards
+           return;
+      if ( ! rfid.PICC_ReadCardSerial()) // Verify if the NUID has been readed
+           return;
+      Serial.println("The NUID tag is:");
+      printHex(rfid.uid.uidByte, rfid.uid.size);
+      delay(500);
+      rfid.PICC_HaltA();  // Halt PICC
+      rfid.PCD_StopCrypto1();  // Stop encryption on PCD
+      return;
+      }
+    else if(Bup==1||Bdw==1||Sup==1||Sdw==1||rfid.PICC_IsNewCardPresent()){
+        if(Bup==1&&Bdw==0){//選擇路線 向上
       while(1){//防止彈跳
         Bup = digitalRead(busup);
         if(Bup==0)
@@ -309,18 +343,15 @@ void loop() {
         }
         delay(50);
 
-   if ( ! rfid.PICC_IsNewCardPresent()) { // Look for new cards
-      Serial.println(rfid.PICC_IsNewCardPresent());
-      return;
-      
+        if ( ! rfid.PICC_IsNewCardPresent())  // Look for new cards
+           return;
+        if ( ! rfid.PICC_ReadCardSerial()) // Verify if the NUID has been readed
+           return;
+        Serial.println("The NUID tag is:");
+        printHex(rfid.uid.uidByte, rfid.uid.size);
+        delay(500);
+        rfid.PICC_HaltA();  // Halt PICC
+        rfid.PCD_StopCrypto1();  // Stop encryption on PCD
       }
-   if ( ! rfid.PICC_ReadCardSerial()) // Verify if the NUID has been readed
-      return;
-
-   Serial.println(rfid.PICC_IsNewCardPresent());
-   Serial.println("The NUID tag is:");
-   printHex(rfid.uid.uidByte, rfid.uid.size);
-   delay(5000);
-   rfid.PICC_HaltA();  // Halt PICC
-   rfid.PCD_StopCrypto1();  // Stop encryption on PCD
+      
 }
