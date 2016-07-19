@@ -4,7 +4,7 @@ rst: pin 9
 miso: pin 12
 mosi: pin 11
 sck: pin 13
-sda pin 10
+sda pin 8
 //////////////
 BUS line 
 up pin 5
@@ -15,17 +15,24 @@ up pin 3
 down pin2
 2016/5/1
 新增LCD螢幕功能
+5/10
+更改字串格式
+試做乙太網路(未完成
 ******************************/
 #include <SPI.h>
 #include <MFRC522.h>
 #include <Wire.h> 
-
+#include <Ethernet.h>
 #include <LiquidCrystal_I2C.h>
-LiquidCrystal_I2C lcd(0x27,16,2); 
-
-#define SS_PIN 10
+#define SS_PIN 8 //因為pin10乙太網路模組使用特別更改
 #define RST_PIN 9
+
+LiquidCrystal_I2C lcd(0x27,16,2); 
 MFRC522 rfid(SS_PIN, RST_PIN);
+
+byte mac[] = { 0xDE, 0xAD, 0x1E, 0xEF, 0xF4, 0x5D };
+char server[] = "ibus.team-bob.org"; //改為定瑞的
+EthernetClient client;
 int busup = 5;
 int busdow = 4;
 int stopup = 3;
@@ -39,31 +46,43 @@ int busstopD = 1;
 int busstopE = 1;
 int busstopF = 1;
 
-char sendUid[13]="UID:";
+char sendUid[13]="UID=";
+char thisStop[10]="from_sn=1";
+char arrStop[8]="to_sn=1";//6
+char thisBus[10]="route=";
 char reg[5];
 int puid[4];
-char sendtoserver[256]="FCU001,";//7
+char sendtoserver[256];//16
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
+  Serial.println("hello");
+  delay(500);
+  SPI.begin(); // Init SPI bus
+  Serial.println("hello");
   pinMode(busup,INPUT);
   pinMode(busdow,INPUT);
   pinMode(stopup,INPUT);
   pinMode(stopdow,INPUT);
-  
+  Serial.println("hello");
   lcd.init(); 
   lcd.backlight();
+  Serial.println("hello");
   
-  SPI.begin(); // Init SPI bus
   rfid.PCD_Init(); // Init MFRC522 
-  
+  /*
+  if(Ethernet.begin(mac)==0){
+      Serial.println("link fial");
+     }
+   */
+  Serial.println("hello00");   
   Serial.println("NO.160 BUS_1  STOP");
   lcd.print("N"); lcd.print("O"); lcd.print(".");
   lcd.print("1"); lcd.print("6"); lcd.print("0"); lcd.print(" ");
   lcd.print("S"); lcd.print("T"); lcd.print("O"); lcd.print("P"); lcd.print(":");
   lcd.print("0"); lcd.print("0"); lcd.print("1");
-  strcat(sendtoserver, "NO,160,STOP:001,");
+  strcat(sendtoserver, "busNo=NO.160&arrStop=001&");
 }
 
 void printHex(byte *buffer, byte bufferSize) {//rfid
@@ -130,6 +149,21 @@ void LCD__2(){
   lcd.setCursor(3, 0);
   lcd.print(" "); lcd.print(" ");  lcd.print("2");
   }
+void successmesg(){
+  lcd.setCursor(0,1);
+  lcd.print("S");lcd.print("U");lcd.print("C");lcd.print("C");lcd.print("E");lcd.print("S");lcd.print("S");lcd.print("!");
+  }
+void errmesg(){
+  lcd.setCursor(0,1);
+  lcd.print("e");lcd.print("r");lcd.print("r");lcd.print("o");lcd.print("r");
+  }
+void clearlab(){
+  lcd.setCursor(0,1);
+  int i;
+  for(i=0;i<16;i++){
+    lcd.print(" ");
+    }
+  }
 //----------車站----------------
 void linezero(){//160LINE
   int Sup=digitalRead(stopup);
@@ -169,38 +203,45 @@ void linezero(){//160LINE
     switch(busstopA){
       case 1:
         LCD001();
-        sendtoserver[14]='\0';
-        strcat(sendtoserver,"STOP:001,");//23
+       // sendtoserver[29]='\0';
+        arrStop[0]='\0';
+        strcat(arrStop,"to_sn=1");//41
         break;
       case 2:
         LCD002();
-        sendtoserver[14]='\0';
-        strcat(sendtoserver,"STOP:002,");//23
+        //sendtoserver[29]='\0';
+         arrStop[0]='\0';
+        strcat(arrStop,"to_sn=2");//41
         break;
       case 3:
         LCD003();
-        sendtoserver[14]='\0';
-        strcat(sendtoserver,"STOP:003,");//23
+        //sendtoserver[29]='\0';
+         arrStop[0]='\0';
+        strcat(arrStop,"to_sn=3");//41
         break;
       case 4:
         LCD004();
-        sendtoserver[14]='\0';
-        strcat(sendtoserver,"STOP:004,");//23
+       // sendtoserver[29]='\0';
+        arrStop[0]='\0';
+        strcat(arrStop,"to_sn=4");//41
         break;
       case 5:
         LCD005();
-        sendtoserver[14]='\0';
-        strcat(sendtoserver,"STOP:005,");//23
+        //sendtoserver[29]='\0';
+         arrStop[0]='\0';
+        strcat(arrStop,"to_sn=5");//41
         break;
       case 6:
         LCD006();
-        sendtoserver[14]='\0';
-        strcat(sendtoserver,"STOP:006,");//23
+       // sendtoserver[29]='\0';
+        arrStop[0]='\0';
+        strcat(arrStop,"to_sn=6");//41
         break;
       case 7:
         LCD007();
-        sendtoserver[14]='\0';
-        strcat(sendtoserver,"STOP:007,");//23
+       // sendtoserver[29]='\0';
+         arrStop[0]='\0';
+        strcat(arrStop,"to_sn=7");//41
         break;
       }
 }
@@ -241,40 +282,47 @@ void lineone(){
   //sw
   
   switch(busstopB){
-      case 1:
+     case 1:
         LCD001();
-        sendtoserver[14]='\0';
-        strcat(sendtoserver,"STOP:001,");//23
+       // sendtoserver[29]='\0';
+        arrStop[0]='\0';
+        strcat(arrStop,"to_sn=1");//41
         break;
       case 2:
         LCD002();
-        sendtoserver[14]='\0';
-        strcat(sendtoserver,"STOP:002,");//23
+        //sendtoserver[29]='\0';
+         arrStop[0]='\0';
+        strcat(arrStop,"to_sn=2");//41
         break;
       case 3:
         LCD003();
-        sendtoserver[14]='\0';
-        strcat(sendtoserver,"STOP:003,");//23
+        //sendtoserver[29]='\0';
+         arrStop[0]='\0';
+        strcat(arrStop,"to_sn=3");//41
         break;
       case 4:
         LCD004();
-        sendtoserver[14]='\0';
-        strcat(sendtoserver,"STOP:004,");//23
+       // sendtoserver[29]='\0';
+        arrStop[0]='\0';
+        strcat(arrStop,"to_sn=4");//41
         break;
       case 5:
         LCD005();
-        sendtoserver[14]='\0';
-        strcat(sendtoserver,"STOP:005,");//23
+        //sendtoserver[29]='\0';
+         arrStop[0]='\0';
+        strcat(arrStop,"to_sn=5");//41
         break;
       case 6:
         LCD006();
-        sendtoserver[14]='\0';
-        strcat(sendtoserver,"STOP:006,");//23
+       // sendtoserver[29]='\0';
+        arrStop[0]='\0';
+        strcat(arrStop,"to_sn=6");//41
         break;
       case 7:
         LCD007();
-        sendtoserver[14]='\0';
-        strcat(sendtoserver,"STOP:007,");//23
+       // sendtoserver[29]='\0';
+         arrStop[0]='\0';
+        strcat(arrStop,"to_sn=7");//41
         break;
       }
       
@@ -315,40 +363,47 @@ void linetwo(){
   //sw
   
   switch(busstopC){
-      case 1:
+    case 1:
         LCD001();
-        sendtoserver[14]='\0';
-        strcat(sendtoserver,"STOP:001,");//23
+       // sendtoserver[29]='\0';
+        arrStop[0]='\0';
+        strcat(arrStop,"to_sn=1");//41
         break;
       case 2:
         LCD002();
-        sendtoserver[14]='\0';
-        strcat(sendtoserver,"STOP:002,");//23
+        //sendtoserver[29]='\0';
+         arrStop[0]='\0';
+        strcat(arrStop,"to_sn=2");//41
         break;
       case 3:
         LCD003();
-        sendtoserver[14]='\0';
-        strcat(sendtoserver,"STOP:003,");//23
+        //sendtoserver[29]='\0';
+         arrStop[0]='\0';
+        strcat(arrStop,"to_sn=3");//41
         break;
       case 4:
         LCD004();
-        sendtoserver[14]='\0';
-        strcat(sendtoserver,"STOP:004,");//23
+       // sendtoserver[29]='\0';
+        arrStop[0]='\0';
+        strcat(arrStop,"to_sn=4");//41
         break;
       case 5:
         LCD005();
-        sendtoserver[14]='\0';
-        strcat(sendtoserver,"STOP:005,");//23
+        //sendtoserver[29]='\0';
+         arrStop[0]='\0';
+        strcat(arrStop,"to_sn=5");//41
         break;
       case 6:
         LCD006();
-        sendtoserver[14]='\0';
-        strcat(sendtoserver,"STOP:006,");//23
+       // sendtoserver[29]='\0';
+        arrStop[0]='\0';
+        strcat(arrStop,"to_sn=6");//41
         break;
       case 7:
         LCD007();
-        sendtoserver[14]='\0';
-        strcat(sendtoserver,"STOP:007,");//23
+       // sendtoserver[29]='\0';
+         arrStop[0]='\0';
+        strcat(arrStop,"to_sn=7");//41
         break;
       }
       
@@ -466,7 +521,7 @@ void loop() {
     int Sup=digitalRead(stopup);
     int Sdw=digitalRead(stopdow);
   
-   
+    clearlab();
     
     if(Bup==0&&Bdw==0&&Sup==0&&Sdw==0) {
       if ( ! rfid.PICC_IsNewCardPresent())  // Look for new cards
@@ -480,16 +535,57 @@ void loop() {
       rfid.PICC_HaltA();  // Halt PICC
       rfid.PCD_StopCrypto1();  // Stop encryption on PCD
       
-      sendtoserver[23]='\0';
+      sendtoserver[0]='\0';
       strcat(sendtoserver, sendUid);
+      strcat(sendtoserver, "&");
+      strcat(sendtoserver, thisBus);
+      sendtoserver[23]='\0';
+      strcat(sendtoserver, thisStop);
+      strcat(sendtoserver, "&");
+      sendtoserver[33]='\0';
+      strcat(sendtoserver, arrStop);
+      
+      //int lenght=sendtoserver.lenght();
       Serial.println(sendtoserver);
+      int i=0;
+      while(sendtoserver[i]!='\0'){
+           i++; 
+        }
+        Serial.print("lenght=");
+        Serial.println(i);
+        
+      if(client.connect(server, 3000)){
+        Serial.println("good");
+
+        client.println("POST /v2/reservation HTTP/1.1");
+        client.println("Host: ibus.team-bob.org:3000");
+       // client.println("User-Agent: iBus/1.0");
+        client.println("Connection: close");
+        client.println("Content-Type:application/x-www-form-urlencoded");
+        client.println("Content-Length: 40");
+        client.println("");  
+        client.println(sendtoserver);
+        successmesg();
+        delay(1000);
+        }
+        else{
+          Serial.println("Please swipe the card again");
+          errmesg();
+          }
+          /*
+          if (client.available()) {
+            char c = client.read();
+            Serial.print(c);
+           }
+           */
+      Serial.println(sendtoserver);
+      
       sendUid[4]='\0';
       
       return;
       }
     else if(Bup==1||Bdw==1||Sup==1||Sdw==1||rfid.PICC_IsNewCardPresent()){
-       // sendtoserver[7]='\0';
-        //sendUid[4]='\0';
+      
         if(Bup==1&&Bdw==0){//選擇路線 向上
       while(1){//防止彈跳
         Bup = digitalRead(busup);
@@ -522,31 +618,34 @@ void loop() {
         case 0:
           Serial.print("NO.160 BUS");
           LCDNO(); LCD160(); LCDstop(); 
-          sendtoserver[7]='\0';
-          strcat(sendtoserver, "NO.160,");//14
+          //sendtoserver[16]='\0';
+          thisBus[6]='\0';
+          strcat(thisBus, "160&");//10
           //bus 0 sw
           linezero();
           break;
         case 1:
           Serial.print("NO.1 BUS");
           LCDNO(); LCD__1(); LCDstop(); 
-          sendtoserver[7]='\0';
-          strcat(sendtoserver, "NO.  1,");//14
+          //sendtoserver[16]='\0';
+          thisBus[6]='\0';
+          strcat(thisBus, "001&");//8
           //bus 1 sw
           lineone();
           break;
         case 2:
           Serial.print("NO.2 BUS");
           LCDNO(); LCD__2(); LCDstop();
-          sendtoserver[7]='\0';
-          strcat(sendtoserver, "NO.  2,");//14
+          //sendtoserver[16]='\0';
+          thisBus[6]='\0';
+          strcat(thisBus, "002&");//8
           //bus 2 sw
           linetwo();
           break;
         case 3:
           Serial.print("NO.3 BUS");
-         // sendtoserver[7]='\0';
-         // strcat(sendtoserver, "NO.  3,");//14
+         // sendtoserver[16]='\0';
+         // strcat(sendtoserver, "busNo=NO.  3&");//29
           //bus 3 sw
           linethr();
           break;
@@ -562,8 +661,5 @@ void loop() {
           break;
         }
         delay(50);
-      }
-     // sendtoserver[7]='\0';
-      //sendUid[4]='\0';
-      
+      }   
 }
