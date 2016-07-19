@@ -18,6 +18,14 @@ int gs = 34;
 int hs = 36;
 int is = 38;
 //停靠站按鈕
+int led1 = 23;
+int led2 = 25;
+int led3 = 27;
+int led4 = 29;
+    
+int busnow = 1;
+int bussec = 0;
+//---------------------------------
 byte mac[] = { 0xDE, 0xAD, 0x1E, 0xEF, 0xF4, 0x5D };
 char server[] = "ibus.team-bob.org"; //改為定瑞的
 //---------------------------------
@@ -27,10 +35,11 @@ void setup() {
   SPI.begin();
   Serial.println("hellow!");
   rfid.PCD_Init(); // Init MFRC522
+  /*
   if(Ethernet.begin(mac)==0){
     Serial.println("link fail");
     }
-  
+  */
   pinMode(as, INPUT);
   pinMode(bs, INPUT);
   pinMode(cs, INPUT);
@@ -40,6 +49,12 @@ void setup() {
   pinMode(gs, INPUT);
   pinMode(hs, INPUT);
   pinMode(is, INPUT);
+  //---------------------------
+  pinMode(led1, OUTPUT);
+  pinMode(led2, OUTPUT);
+  pinMode(led3, OUTPUT);
+  pinMode(led4, OUTPUT);
+  
   Serial.println("Start Bus Stop!");
 }
 //////////////////////////////////////
@@ -82,8 +97,78 @@ void loop() {
   int stoph = digitalRead(hs);
   int stopi = digitalRead(is);
  // Serial.println("Start button.");
-  
+  bussec++;
+  if(bussec%5==0){
+    busnow++;
+    }
+   else if(bussec>44){
+    busnow = 1;
+    bussec = 0;
+    }
+    Serial.print("sec: ");
+    Serial.println(bussec);
+    Serial.print("busnow: ");
+    Serial.println(busnow);
+    Serial.println();
+  switch(busnow){
+   case 1:
+    digitalWrite(led1, LOW); //0
+    digitalWrite(led2, LOW);
+    digitalWrite(led3, LOW);
+    digitalWrite(led4, LOW);
+    break;
+  case 2:
+    digitalWrite(led1, HIGH); //1
+    digitalWrite(led2, LOW);
+    digitalWrite(led3, LOW);
+    digitalWrite(led4, LOW);
+    break;
+  case 3:
+    digitalWrite(led1, LOW);  //2
+    digitalWrite(led2, HIGH);
+    digitalWrite(led3, LOW);
+    digitalWrite(led4, LOW);
+    break;
+  case 4:
+    digitalWrite(led1, HIGH);  //3
+    digitalWrite(led2, HIGH);
+    digitalWrite(led3, LOW);
+    digitalWrite(led4, LOW);
+    break;
+  case 5:
+    digitalWrite(led1, LOW);  //4
+    digitalWrite(led2, LOW);
+    digitalWrite(led3, HIGH);
+    digitalWrite(led4, LOW);
+    break;
+  case 6:
+    digitalWrite(led1, HIGH);  //5
+    digitalWrite(led2, LOW);
+    digitalWrite(led3, HIGH);
+    digitalWrite(led4, LOW);
+    break;
+  case 7:
+    digitalWrite(led1, LOW);  //6
+    digitalWrite(led2, HIGH);
+    digitalWrite(led3, HIGH);
+    digitalWrite(led4, LOW);
+    break;
+  case 8:
+    digitalWrite(led1, HIGH);  //7
+    digitalWrite(led2, HIGH);
+    digitalWrite(led3, HIGH);
+    digitalWrite(led4, LOW);
+    break;
+  case 9:
+    digitalWrite(led1, LOW);  //8
+    digitalWrite(led2, LOW);
+    digitalWrite(led3, LOW);
+    digitalWrite(led4, HIGH);
+    break;
+   }
+   
   if ((stopa + stopb + stopc + stopd + stope + stopf + stopg + stoph + stopi) == 0) {
+    delay(500);
     //Serial.println("Read RFID.");
     if ( ! rfid.PICC_IsNewCardPresent())  // Look for new cards
       return;
@@ -255,6 +340,7 @@ void loop() {
       Serial.println(to_sn);
     }
     //-----------------------------------------------
+    delay(500);
   }
-
+  delay(500);
 }
